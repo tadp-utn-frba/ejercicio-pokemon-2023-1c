@@ -1,8 +1,12 @@
-name := "ejercicio-pokemon-cuarentena-2020-1C"
+name := "scala"
 
-version := "1.0"
+version := "1"
 
-scalaVersion := "2.12.10"
+organization := "edu.ar.utn.tadp"
 
-libraryDependencies += "org.scalactic" %% "scalactic" % "3.0.5"
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
+scalaVersion := "2.13.0"
+
+libraryDependencies ++= Seq(
+  "org.scalatest" %% "scalatest" % "3.2.9" % "test",
+  "org.scalactic" %% "scalactic" % "3.2.9"
+)
