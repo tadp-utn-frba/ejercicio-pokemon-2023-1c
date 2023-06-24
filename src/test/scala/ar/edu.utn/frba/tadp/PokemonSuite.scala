@@ -1,28 +1,19 @@
 package ar.edu.utn.frba.tadp.pokemon
 
-import org.scalatest.FlatSpec
-import org.scalatest.Matchers
+import ar.edu.utn.frba.tadp.pokemon.Pokemon.experienciaNecesariaParaNivel
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
 
-class ActividadSuite extends FlatSpec with Matchers {
+class PokemonSpec extends AnyFlatSpec {
+  "la experiencia necesaria estar en nivel 1" should "ser 0" in {
+    val resistenciaEvolutiva = 1
 
-  val especieCharizard = Especie(TipoFuego, None, 1, Stats(1, 3, 5), List())
-  val especieHitmonlee = Especie(TipoPelea, None, 1, Stats(1, 3, 5), List())
-
-  "Un charizard" should "descansar y tener toda su energia máxima" in {
-    val charizard: Pokemon = Pokemon(
-      Stats(1, 1, 43), especieCharizard, 200)
-    val estadoInicial = Normal(charizard)
-    val pokemonResultante = estadoInicial.realizarActividad(Descansar)
-    val pokemon = Estado.unapply(pokemonResultante).get
-
-    assert(pokemon.energia === 200)
+    assert(experienciaNecesariaParaNivel(1, resistenciaEvolutiva) === 0)
   }
 
-  "Un hitmonlee" should "levantar pesas y tener 3 de experiencia" in {
-    val hitmonlee = Pokemon(Stats(1, 1, 1), especieHitmonlee, 40, 1)
-    val pokemonResultante = Normal(hitmonlee).realizarActividad(LevantarPesas(1))
-    val pokemon = Estado.unapply(pokemonResultante).get 
+  "la experiencia necesaria para estar en un nivel" should "ser el doble de la necesaria para el nivel anterior + la resistencia evolutiva" in {
+    val resistenciaEvolutiva = 350
 
-    assert(pokemon.xp === 3)
+    assert(experienciaNecesariaParaNivel(3, resistenciaEvolutiva) === 1050)
   }
 }
