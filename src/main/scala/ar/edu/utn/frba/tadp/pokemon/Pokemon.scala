@@ -19,7 +19,7 @@ object GimnasioPokemon {
                       energiaMaxima: Int,
                       experiencia: Int,
                       especie: Especie,
-                      estado: Estado= Bien
+                      estado: Estado = Bien
                     )(energiaInicial: Int,
                       velocidadInicial: Int = 1,
                       fuerzaInicial: Int = 1) {
@@ -29,27 +29,34 @@ object GimnasioPokemon {
     val energia = this.energiaInicial.max(0)
     val fuerza =
       fuerzaInicial.max(1).min(100)
+
+    def copiar(energiaMaxima: Int = energiaMaxima,
+               experiencia: Int = experiencia,
+               especie: Especie = especie,
+               estado: Estado = estado,
+               energia: Int = energia,
+               velocidad: Int = velocidad,
+               fuerza: Int = fuerza) =
+      copy(energiaMaxima = energiaMaxima,
+        experiencia = experiencia,
+        especie = especie,
+        estado = estado)(
+        energiaInicial = energia,
+        velocidadInicial = velocidad,
+        fuerzaInicial = fuerza
+      )
+
     def descansar(): Pokemon = cambiarEnergia(energiaMaxima)
+
     def nadar(minutos: Int): Try[Pokemon] = Try {
       estado match {
         case Bien if pierdeContra(Agua) => cambiarEstadoA(KO)
-        case Bien => {
-          val pokemonDespuesDeNadar = copy(
-            experiencia = experiencia + 200 * minutos)(
-            energiaInicial = energia - minutos,
-            velocidadInicial = velocidad,
-            fuerzaInicial = fuerza
-          )
-          if (tieneTipo(Agua)) {
-            pokemonDespuesDeNadar.copy()(
-              energiaInicial = pokemonDespuesDeNadar.energia,
-              velocidadInicial = pokemonDespuesDeNadar.velocidad + minutos / 60,
-              fuerzaInicial = fuerza
-            )
-          } else pokemonDespuesDeNadar
+        case Bien =>
+          val pokemonDespuesDeNadar = ganarExperiencia(200 * minutos).perderEnergia(minutos)
+          if(tieneTipo(Agua)) pokemonDespuesDeNadar.ganarVelocidad(minutos / 60) else pokemonDespuesDeNadar
       }
     }
-    }
+
     def levantarPesas(kilos: Int): Try[Pokemon] = {
       Try {
         this match {
@@ -57,38 +64,25 @@ object GimnasioPokemon {
             throw new RuntimeException("Un fantasma no puede levantar pesas")
           case pokemon if kilos > 10 * pokemon.fuerza =>
             pokemon.cambiarEnergia(energia - 10)
-          case Pelea() =>
-            this.cambiarExperiencia(experiencia + kilos * 2)
           case pokemon =>
-            pokemon.cambiarExperiencia(experiencia + kilos)
+            val experienciaPorLevantarPesas = if(tieneTipo(Pelea)) kilos * 2 else kilos
+            pokemon.ganarExperiencia(experienciaPorLevantarPesas)
         }
       }
     }
 
     def tieneTipo(tipo: Tipo) = especie.tieneTipo(tipo)
 
-    def cambiarEstadoA(nuevoEstado: Estado) =
-      copy(estado = nuevoEstado)(
-        energiaInicial = energiaInicial, velocidadInicial = velocidadInicial, fuerzaInicial = fuerzaInicial
-      )
-
     def pierdeContra(unTipo: Tipo) = especie.pierdeContra(unTipo)
 
-    def cambiarExperiencia(nuevaExperiencia: Int): Pokemon = {
-      copy(experiencia = nuevaExperiencia)(
-        energiaInicial = energiaInicial,
-        velocidadInicial = velocidadInicial,
-        fuerzaInicial = fuerza
-      )
-    }
+    def cambiarEstadoA(nuevoEstado: Estado) = copiar(estado = nuevoEstado)
 
-    def cambiarEnergia(nuevaEnergia: Int): Pokemon = {
-      copy()(
-        energiaInicial = nuevaEnergia,
-        velocidadInicial = velocidadInicial,
-        fuerzaInicial = fuerza
-      )
-    }
+    def ganarVelocidad(cantidad: Int) = copiar(velocidad = velocidad + cantidad)
+    def cambiarExperiencia(nuevaExperiencia: Int): Pokemon = copiar(experiencia = nuevaExperiencia)
+
+    def ganarExperiencia(cantidad: Int) = copiar(experiencia = experiencia + cantidad)
+    def perderEnergia(cantidad: Int) = copiar(energia = energia - cantidad)
+    def cambiarEnergia(nuevaEnergia: Int): Pokemon = copiar(energia = nuevaEnergia)
 
     // que no tenga el metodo -> que no compile
     // que me devuelva al pokemon como esta -> no cumple el requerimiento
@@ -98,15 +92,20 @@ object GimnasioPokemon {
   }
 
   trait Estado
+
   case object KO extends Estado
+
   case object Bien extends Estado
+
   object Especie {
     def unapply(pokemon: Pokemon) = Some(pokemon.especie)
   }
+
   case class Especie(tipoPrimario: Tipo,
                      tipoSecundario: Option[Tipo] = None) {
 
     val tipos = tipoPrimario :: tipoSecundario.toList
+
     def tieneTipo(unTipo: Tipo) =
       tipoPrimario == unTipo || tipoSecundario.contains(unTipo)
 
@@ -114,22 +113,30 @@ object GimnasioPokemon {
       tipos.exists(tipo => tipo.pierdeContra(unTipo))
 
   }
+
   class Tipo(debilidades: => List[Tipo] = Nil) {
     def pierdeContra(otroTipo: Tipo): Boolean =
       debilidades.contains(otroTipo)
+
     def unapply(pokemon: Pokemon) = pokemon tieneTipo this
-      // Otra opcion:
-      //      Option.when(pokemon.tieneTipo(this))(pokemon)
+    // Otra opcion:
+    //      Option.when(pokemon.tieneTipo(this))(pokemon)
 
 
     //    def unapply(pokemon: Pokemon) =
-//      if (pokemon.tieneTipo(this)) Option(pokemon) else None
+    //      if (pokemon.tieneTipo(this)) Option(pokemon) else None
   }
+
   case object Agua extends Tipo()
+
   case object Fuego extends Tipo(List(Agua))
+
   case object Tierra extends Tipo(List(Agua))
+
   case object Roca extends Tipo(List(Agua))
+
   case object Electricidad extends Tipo()
+
   case object Pelea extends Tipo()
 
   lazy val Fantasma: Tipo = new Tipo(List(Fantasma))
@@ -156,7 +163,10 @@ object GimnasioPokemon {
       }
   }
 
-  val descansar: Actividad = new Actividad(Try { _.descansar() })
+  val descansar: Actividad = new Actividad(pokemon => Try {
+    pokemon.descansar()
+  })
+
   def nadar(minutos: Int): Actividad = new Actividad(_.nadar(minutos))
 
   def levantarPesas(kilos: Int): Actividad = new Actividad(_.levantarPesas(kilos))
